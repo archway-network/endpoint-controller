@@ -1,11 +1,11 @@
-package main
+package utils
 
 import (
 	"os"
 	"strconv"
 )
 
-func removeFromSlice(slice []string, v string) []string {
+func RemoveFromSlice(slice []string, v string) []string {
 	for i, s := range slice {
 		if s == v {
 			return append(slice[:i], slice[i+1])
@@ -14,7 +14,7 @@ func removeFromSlice(slice []string, v string) []string {
 	return slice
 }
 
-func getEnv(name, defaultValue string) (int, error) {
+func GetEnv(name, defaultValue string) (int, error) {
 	var err error
 	var envVar int
 	envVarString := os.Getenv(name)

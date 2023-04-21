@@ -14,6 +14,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+
+	"github.com/archway-network/endpoint-controller/pkg/controller"
+	"github.com/archway-network/endpoint-controller/pkg/utils"
 )
 
 const (
@@ -26,14 +29,14 @@ func main() {
 	var blockMiss int
 
 	// Get environment variables, if not use defaults
-	syncPeriodEnv, err := getEnv("SYNC_PERIOD", defaultSyncPeriod)
+	syncPeriodEnv, err := utils.GetEnv("SYNC_PERIOD", defaultSyncPeriod)
 	if err != nil {
 		panic(err)
 	}
 
 	syncPeriod = time.Duration(syncPeriodEnv) * time.Second
 
-	blockMiss, err = getEnv("BLOCK_MISS", defaultBlockMiss)
+	blockMiss, err = utils.GetEnv("BLOCK_MISS", defaultBlockMiss)
 	if err != nil {
 		panic(err)
 	}
@@ -55,8 +58,6 @@ func main() {
 		panic(err.Error())
 	}
 
-	klog.Infof("Watching services...")
-
 	// create a workqueue to handle service events
 	queue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "services")
 
@@ -71,12 +72,12 @@ func main() {
 	)
 
 	// create a controller to handle service events
-	controller := &Controller{
-		clientset: clientset,
-		queue:     queue,
-		recorder:  recorder,
-		resync:    syncPeriod,
-		blockMiss: blockMiss,
+	controller := controller.Controller{
+		Clientset: clientset,
+		Queue:     queue,
+		Recorder:  recorder,
+		Resync:    syncPeriod,
+		BlockMiss: blockMiss,
 	}
 
 	// start the controller

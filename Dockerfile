@@ -2,7 +2,7 @@
 FROM golang:1.20-alpine AS build
 WORKDIR /app
 COPY . .
-RUN go build -o endpoint-controller .
+RUN go build -o endpoint-controller cmd/endpoint-controller.go
 
 # Final stage
 FROM scratch

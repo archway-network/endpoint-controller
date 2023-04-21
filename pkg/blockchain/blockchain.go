@@ -1,4 +1,4 @@
-package main
+package blockchain
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/strings/slices"
+
+	"github.com/archway-network/endpoint-controller/pkg/utils"
 )
 
 type NodeStatus struct {
@@ -44,7 +46,7 @@ func getRequest(host string, path string) ([]byte, error) {
 	return b, nil
 }
 
-func (c *Controller) checkNodeBehind(healthy, unhealthy []string) ([]string, []string) {
+func checkNodeBehind(healthy, unhealthy []string, blockMiss int) ([]string, []string) {
 	var highest int
 	nodeBlockheights := make(map[string]int)
 	for _, ip := range healthy {
@@ -81,15 +83,15 @@ func (c *Controller) checkNodeBehind(healthy, unhealthy []string) ([]string, []s
 	// compare block heights
 	// remove target from healthy if highest is greater than blockmiss amount
 	for k, v := range nodeBlockheights {
-		if (highest - v) >= c.blockMiss {
+		if (highest - v) >= blockMiss {
 			unhealthy = append(unhealthy, k)
-			healthy = removeFromSlice(healthy, k)
+			healthy = utils.RemoveFromSlice(healthy, k)
 		}
 	}
 	return healthy, unhealthy
 }
 
-func (c *Controller) blockchainHealthCheck(ips []string, ports []corev1.EndpointPort) ([]string, []string) {
+func BlockchainHealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]string, []string) {
 	var healthy, unhealthy []string
 	for _, ip := range ips {
 		klog.Infof("checking blockchain node (%s) health", ip)
@@ -107,5 +109,5 @@ func (c *Controller) blockchainHealthCheck(ips []string, ports []corev1.Endpoint
 		}
 	}
 
-	return c.checkNodeBehind(healthy, unhealthy)
+	return checkNodeBehind(healthy, unhealthy, blockMiss)
 }

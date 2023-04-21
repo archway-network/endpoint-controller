@@ -1,4 +1,4 @@
-package main
+package controller
 
 import (
 	"context"
@@ -13,35 +13,37 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+
+	"github.com/archway-network/endpoint-controller/pkg/blockchain"
 )
 
 // Controller defines the endpoint controller.
 type Controller struct {
-	clientset kubernetes.Interface
-	queue     workqueue.RateLimitingInterface
-	resync    time.Duration
-	recorder  record.EventRecorder
-	blockMiss int
+	Clientset kubernetes.Interface
+	Queue     workqueue.RateLimitingInterface
+	Resync    time.Duration
+	Recorder  record.EventRecorder
+	BlockMiss int
 }
 
 // Run starts the endpoint controller.
 func (c *Controller) Run() {
-	defer c.queue.ShutDown()
+	defer c.Queue.ShutDown()
 
 	klog.Info("Starting endpoint controller...")
 
 	// set up the resync timer
-	timer := time.NewTicker(c.resync)
+	timer := time.NewTicker(c.Resync)
 	quit := make(chan struct{})
 	defer timer.Stop()
-	klog.Infof("Synching every %s", c.resync)
+	klog.Infof("Synching every %s", c.Resync)
 
 	for {
 		select {
 		case <-timer.C:
 			klog.Info("Resyncing endpoints...")
 			c.resyncEndpoints()
-			timer.Reset(c.resync)
+			timer.Reset(c.Resync)
 		case <-quit:
 			timer.Stop()
 			return
@@ -95,7 +97,7 @@ func createEndpointAddressObject(service corev1.Service) ([]corev1.EndpointAddre
 
 // patchEndpoints patches the endpoint with correct set of data.
 func (c *Controller) patchEndpoints(endpoints corev1.Endpoints) error {
-	_, err := c.clientset.CoreV1().Endpoints(endpoints.Namespace).Update(
+	_, err := c.Clientset.CoreV1().Endpoints(endpoints.Namespace).Update(
 		context.Background(), &endpoints, v1.UpdateOptions{},
 	)
 	if err != nil {
@@ -130,14 +132,14 @@ func (c *Controller) createEndpoints(service corev1.Service) error {
 		endpoints.Subsets = append(endpoints.Subsets, subset)
 
 		// create the endpoints.
-		_, err = c.clientset.CoreV1().Endpoints(service.Namespace).Create(
+		_, err = c.Clientset.CoreV1().Endpoints(service.Namespace).Create(
 			context.Background(), endpoints, v1.CreateOptions{},
 		)
 		if err != nil {
 			return err
 		}
 
-		c.recorder.Eventf(
+		c.Recorder.Eventf(
 			&service,
 			corev1.EventTypeNormal,
 			"CreatedEndpoint", "Created endpoint for service %s", service.Name,
@@ -150,30 +152,9 @@ func (c *Controller) createEndpoints(service corev1.Service) error {
 	return retryErr
 }
 
-// TODO: loop throug endpoints that have correct annotation and check if the service exists for that
-// if not then delete, if yes don't do anything
-// deleteEndpoints deletes the endpoint for the given service
-// func (c *Controller) deleteEndpoints(service *corev1.Service) error {
-// 	err := c.clientset.CoreV1().Endpoints(service.Namespace).Delete(
-// 	context.Background(), service.Name, v1.DeleteOptions{}
-// 	)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	c.recorder.Eventf(
-// 	service,
-// 	corev1.EventTypeNormal,
-// 	"DeletedEndpoint", "Deleted endpoint for service %s", service.Name,
-// 	)
-// 	klog.Infof("Deleted endpoint for service %s\n", service.Name)
-//
-// 	return nil
-// }
-
 // resyncEndpoints updates all endpoints for the watched services.
 func (c *Controller) resyncEndpoints() {
-	services, err := c.clientset.CoreV1().Services("").List(context.Background(), v1.ListOptions{})
+	services, err := c.Clientset.CoreV1().Services("").List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		klog.Error(err)
 	}
@@ -190,8 +171,13 @@ func (c *Controller) resyncEndpoints() {
 	klog.Info("Finished synching endpoints")
 }
 
+// findEndpoints
+// finds endpoints and checks if it matches with the service
+// if it matches, checks the endpoints targets health
+// if not found, creates the endpoints
+// return error if something breaks.
 func (c *Controller) findEndpoints(service corev1.Service) error {
-	endpoints, err := c.clientset.CoreV1().Endpoints("").List(context.Background(), v1.ListOptions{})
+	endpoints, err := c.Clientset.CoreV1().Endpoints("").List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -222,7 +208,7 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 	}
 
 	ips := strings.Split(service.Annotations["endpoint-controller-addresses"], ",")
-	healthyTarget, unhealthyTarget := c.blockchainHealthCheck(ips, endpoint.Subsets[0].Ports)
+	healthyTarget, unhealthyTarget := blockchain.BlockchainHealthCheck(ips, endpoint.Subsets[0].Ports, c.BlockMiss)
 
 	// add target to endpoints if it does not already exists
 	for _, ht := range healthyTarget {
