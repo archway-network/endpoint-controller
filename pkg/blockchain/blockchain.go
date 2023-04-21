@@ -91,7 +91,7 @@ func checkNodeBehind(healthy, unhealthy []string, blockMiss int) ([]string, []st
 	return healthy, unhealthy
 }
 
-func BlockchainHealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]string, []string) {
+func HealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]string, []string) {
 	var healthy, unhealthy []string
 	for _, ip := range ips {
 		klog.Infof("checking blockchain node (%s) health", ip)

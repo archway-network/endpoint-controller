@@ -208,7 +208,7 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 	}
 
 	ips := strings.Split(service.Annotations["endpoint-controller-addresses"], ",")
-	healthyTarget, unhealthyTarget := blockchain.BlockchainHealthCheck(ips, endpoint.Subsets[0].Ports, c.BlockMiss)
+	healthyTarget, unhealthyTarget := blockchain.HealthCheck(ips, endpoint.Subsets[0].Ports, c.BlockMiss)
 
 	// add target to endpoints if it does not already exists
 	for _, ht := range healthyTarget {

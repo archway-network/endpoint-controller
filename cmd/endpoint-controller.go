@@ -1,4 +1,4 @@
-package main
+package main //nolint:cyclop // complexity is not a big issue for now
 
 import (
 	"context"
