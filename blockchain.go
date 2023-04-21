@@ -2,40 +2,110 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/strings/slices"
 )
 
-func responsiveEndpoint(ip string, port int32) bool {
-	hostPort := net.JoinHostPort(ip, strconv.Itoa(int(port)))
-	cli := &http.Client{}
-	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+hostPort, nil) // OK
-	if err != nil {
-		klog.Error(err)
-		return false
-	}
-	resp, err := cli.Do(req)
-	resp.Body.Close()
-	if err != nil {
-		klog.Error(err)
-		return false
-	}
-	return true
+type NodeStatus struct {
+	Result struct {
+		SyncInfo struct {
+			LatestBlockHeight string `json:"latest_block_height"`
+		} `json:"sync_info"`
+	} `json:"result"`
 }
 
-func blockchainHealthCheck(ip string, ports []corev1.EndpointPort) bool {
-	klog.Infof("checking blockchain node (%s) health", ip)
-	for _, port := range ports {
-		klog.Infof("checking node %s port %d protocol %s", ip, port.Port, port.Protocol)
-		if !responsiveEndpoint(ip, port.Port) {
-			klog.Errorf("Could not get correct answer from %s:%d, marking target unhealthy", ip, port.Port)
-			return false
+func getRequest(host string, path string) ([]byte, error) {
+	cli := &http.Client{}
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+host+path, nil)
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
+	resp, err := cli.Do(req)
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (c *Controller) checkNodeBehind(healthy, unhealthy []string) ([]string, []string) {
+	var highest int
+	nodeBlockheights := make(map[string]int)
+	for _, ip := range healthy {
+		klog.Infof("checking node %s block height", ip)
+		var nodeStatus NodeStatus
+		hostPort := net.JoinHostPort(ip, "26657")
+		data, err := getRequest(hostPort, "/status")
+		if err != nil {
+			klog.Error(err)
+			unhealthy = append(unhealthy, ip)
+			continue
+		}
+		err = json.Unmarshal(data, &nodeStatus)
+		if err != nil {
+			klog.Error(err)
+			unhealthy = append(unhealthy, ip)
+			continue
+		}
+
+		blockHeightInt, err := strconv.Atoi(nodeStatus.Result.SyncInfo.LatestBlockHeight)
+		if err != nil {
+			klog.Error(err)
+			unhealthy = append(unhealthy, ip)
+			continue
+		}
+
+		if blockHeightInt > highest {
+			highest = blockHeightInt
+		}
+		nodeBlockheights[ip] = blockHeightInt
+		healthy = append(healthy, ip)
+	}
+
+	// compare block heights
+	// remove target from healthy if highest is greater than blockmiss amount
+	for k, v := range nodeBlockheights {
+		if (highest - v) >= c.blockMiss {
+			unhealthy = append(unhealthy, k)
+			healthy = removeFromSlice(healthy, k)
 		}
 	}
-	return true
+	return healthy, unhealthy
+}
+
+func (c *Controller) blockchainHealthCheck(ips []string, ports []corev1.EndpointPort) ([]string, []string) {
+	var healthy, unhealthy []string
+	for _, ip := range ips {
+		klog.Infof("checking blockchain node (%s) health", ip)
+		for _, port := range ports {
+			klog.Infof("checking node %s port %d protocol %s", ip, port.Port, port.Protocol)
+			hostPort := net.JoinHostPort(ip, strconv.Itoa(int(port.Port)))
+			if _, err := getRequest(hostPort, "/"); err != nil {
+				klog.Errorf("Could not get correct answer from %s:%d, marking target unhealthy", ip, port.Port)
+				unhealthy = append(unhealthy, ip)
+				break
+			}
+		}
+		if !slices.Contains(unhealthy, ip) {
+			healthy = append(healthy, ip)
+		}
+	}
+
+	return c.checkNodeBehind(healthy, unhealthy)
 }

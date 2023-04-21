@@ -21,6 +21,7 @@ type Controller struct {
 	queue     workqueue.RateLimitingInterface
 	resync    time.Duration
 	recorder  record.EventRecorder
+	blockMiss int
 }
 
 // Run starts the endpoint controller.
@@ -201,12 +202,12 @@ func (c *Controller) findEndpoints(service corev1.Service) error {
 	for _, endpoint := range endpoints.Items {
 		if endpoint.Name == service.Name {
 			klog.Infof("found existing endpoint %s for service %s \n", endpoint.Name, service.Name)
-			if err = c.checkEndpoints(service, endpoint); err != nil {
-				return err
-			}
+			return c.checkEndpoints(service, endpoint)
 		}
 	}
-	return nil
+
+	// create endpoint.
+	return c.createEndpoints(service)
 }
 
 // check if endpoint exists and the configuration is up to date
@@ -220,33 +221,31 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 		}
 	}
 
-	// Check each IP in service Annotations
-	// if target is healthy and not in endpoint - add it
-	// if target is not healthy and in endpoint - remove it.
-	for _, ip := range strings.Split(service.Annotations["endpoint-controller-addresses"], ",") {
-		if blockchainHealthCheck(ip, endpoint.Subsets[0].Ports) {
-			if !checkEndpointsIP(ip, endpoint) {
-				if err := c.addEndpointTarget(endpoint, ip); err != nil {
-					return err
-				}
-			}
-			continue
-		}
+	ips := strings.Split(service.Annotations["endpoint-controller-addresses"], ",")
+	healthyTarget, unhealthyTarget := c.blockchainHealthCheck(ips, endpoint.Subsets[0].Ports)
 
-		if checkEndpointsIP(ip, endpoint) {
-			if err := c.removeEndpointTarget(endpoint, ip); err != nil {
+	// add target to endpoints if it does not already exists
+	for _, ht := range healthyTarget {
+		if !checkEndpointsIP(ht, endpoint) {
+			if err := c.addEndpointTarget(endpoint, ht); err != nil {
 				return err
 			}
-			continue
 		}
-		return nil
 	}
 
-	// create endpoint.
-	return c.createEndpoints(service)
+	// remove unhealthy target from endpoints
+	for _, ut := range unhealthyTarget {
+		if err := c.removeEndpointTarget(endpoint, ut); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-// checkEndpointsIP.
+// checkEndpointsIP
+// return true if target can be found from endpoints
+// return false if target cannot be found.
 func checkEndpointsIP(ip string, endpoints corev1.Endpoints) bool {
 	for _, address := range endpoints.Subsets[0].Addresses {
 		if address.IP == ip {
@@ -274,6 +273,14 @@ func (c *Controller) removeEndpointTarget(endpoints corev1.Endpoints, ip string)
 	var endpointAddresses []corev1.EndpointAddress
 	const minimumNumber = 2
 
+	// Return if target cannot be found from endpoint.
+	if !checkEndpointsIP(ip, endpoints) {
+		return nil
+	}
+
+	// Remove target from endpoint but fail if it's the last one since endpoints
+	// cannot be empty.
+	klog.Infof("Removing endpoints (%s) target %s", endpoints.Name, ip)
 	if len(endpoints.Subsets[0].Addresses) < minimumNumber {
 		klog.Warningf("Cannot remove the last IP in endpoint %s", endpoints.Name)
 		return nil

@@ -17,10 +17,27 @@ import (
 )
 
 const (
-	defaultResyncPeriod = 30 * time.Second
+	defaultSyncPeriod = "30"
+	defaultBlockMiss  = "6"
 )
 
 func main() {
+	var syncPeriod time.Duration
+	var blockMiss int
+
+	// Get environment variables, if not use defaults
+	syncPeriodEnv, err := getEnv("SYNC_PERIOD", defaultSyncPeriod)
+	if err != nil {
+		panic(err)
+	}
+
+	syncPeriod = time.Duration(syncPeriodEnv) * time.Second
+
+	blockMiss, err = getEnv("BLOCK_MISS", defaultBlockMiss)
+	if err != nil {
+		panic(err)
+	}
+
 	// create the Kubernetes client object using the service account
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -58,7 +75,8 @@ func main() {
 		clientset: clientset,
 		queue:     queue,
 		recorder:  recorder,
-		resync:    defaultResyncPeriod,
+		resync:    syncPeriod,
+		blockMiss: blockMiss,
 	}
 
 	// start the controller
