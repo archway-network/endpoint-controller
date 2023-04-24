@@ -213,7 +213,7 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 	// add target to endpoints if it does not already exists
 	for _, ht := range healthyTarget {
 		if !checkEndpointsIP(ht, endpoint) {
-			if err := c.addEndpointTarget(endpoint, ht); err != nil {
+			if err := c.AddEndpointTarget(endpoint, ht); err != nil {
 				return err
 			}
 		}
@@ -221,7 +221,7 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 
 	// remove unhealthy target from endpoints
 	for _, ut := range unhealthyTarget {
-		if err := c.removeEndpointTarget(endpoint, ut); err != nil {
+		if err := c.RemoveEndpointTarget(endpoint, ut); err != nil {
 			return err
 		}
 	}
@@ -241,9 +241,9 @@ func checkEndpointsIP(ip string, endpoints corev1.Endpoints) bool {
 	return false
 }
 
-// addEndpointTarget
+// AddEndpointTarget
 // adds target IP from endpoint.
-func (c *Controller) addEndpointTarget(endpoints corev1.Endpoints, ip string) error {
+func (c *Controller) AddEndpointTarget(endpoints corev1.Endpoints, ip string) error {
 	newEndpointAddress := corev1.EndpointAddress{
 		IP: ip,
 	}
@@ -253,9 +253,9 @@ func (c *Controller) addEndpointTarget(endpoints corev1.Endpoints, ip string) er
 	return c.patchEndpoints(endpoints)
 }
 
-// removeEndpointTarget
+// RemoveEndpointTarget
 // removes target IP from endpoint.
-func (c *Controller) removeEndpointTarget(endpoints corev1.Endpoints, ip string) error {
+func (c *Controller) RemoveEndpointTarget(endpoints corev1.Endpoints, ip string) error {
 	var endpointAddresses []corev1.EndpointAddress
 	const minimumNumber = 2
 

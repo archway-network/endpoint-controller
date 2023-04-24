@@ -1,6 +1,7 @@
 # build paramters
 BUILD_FOLDER = dist
 APP_VERSION = $(git describe --tags --always)
+PACKAGES = $(go list ./...)
 
 ###############################################################################
 ###                           Basic Golang Commands                         ###
@@ -30,8 +31,18 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	GO111MODULE=on go mod verify
 
+tests-ci:
+	@go get ./...
+	@go test ./...
+
 test:
-	@go test -mod=readonly $(PACKAGES) -cover -race
+	@go test ./...
+
+test_coverage:
+	@go test ./... -coverprofile=coverage.out
+
+vet:
+	@go vet
 
 lint:
 	@echo "--> Running linter"
