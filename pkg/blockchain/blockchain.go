@@ -95,7 +95,6 @@ func CheckNodeBehind(healthy, unhealthy *[]string, blockMiss int) {
 	// compare block heights
 	// remove target from healthy if highest is greater than blockmiss amount
 	// loop this until there are no more unhealthy endpoints
-	klog.Info(nodeBlockheights)
 	for k, v := range nodeBlockheights {
 		if (highest - v) >= blockMiss {
 			*unhealthy = append(*unhealthy, k)

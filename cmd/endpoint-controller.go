@@ -59,7 +59,10 @@ func main() {
 	}
 
 	// create a workqueue to handle service events
-	queue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "services")
+	workqueueConfig := workqueue.RateLimitingQueueConfig{
+		Name: "services",
+	}
+	queue := workqueue.NewRateLimitingQueueWithConfig(workqueue.DefaultControllerRateLimiter(), workqueueConfig)
 
 	// create an event recorder to log events
 	eventBroadcaster := record.NewBroadcaster()
