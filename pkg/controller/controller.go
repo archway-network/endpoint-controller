@@ -82,9 +82,9 @@ func createEndpointPortObject(service corev1.Service) []corev1.EndpointPort {
 // create endpoint addresses object.
 func createEndpointAddressObject(service corev1.Service) ([]corev1.EndpointAddress, error) {
 	var addresses []corev1.EndpointAddress
-	serviceEndpointsAddress := service.Annotations["endpoint-controller-addresses"]
+	serviceEndpointsAddress := service.Annotations["endpoint-controller/targets"]
 	if serviceEndpointsAddress == "" {
-		return addresses, fmt.Errorf("%s : annotation endpoint-controller-addresses is empty", service.Name)
+		return addresses, fmt.Errorf("%s : annotation endpoint-controller/targets is empty", service.Name)
 	}
 
 	for _, address := range strings.Split(serviceEndpointsAddress, ",") {
@@ -118,7 +118,7 @@ func (c *Controller) createEndpoints(service corev1.Service) error {
 			ObjectMeta: v1.ObjectMeta{
 				Name:        service.Name,
 				Namespace:   service.Namespace,
-				Annotations: map[string]string{"endpoint-controller-enable": "true"},
+				Annotations: map[string]string{"endpoint-controller/enable": "true"},
 			},
 			Subsets: []corev1.EndpointSubset{},
 		}
@@ -139,11 +139,11 @@ func (c *Controller) createEndpoints(service corev1.Service) error {
 			return err
 		}
 
-		c.Recorder.Eventf(
-			&service,
-			corev1.EventTypeNormal,
-			"CreatedEndpoint", "Created endpoint for service %s", service.Name,
-		)
+		// c.Recorder.Eventf(
+		// 	&service,
+		// 	corev1.EventTypeNormal,
+		// 	"CreatedEndpoint", "Created endpoint for service %s", service.Name,
+		// )
 		klog.Infof("Created endpoint for service %s\n", service.Name)
 
 		return nil
@@ -161,7 +161,7 @@ func (c *Controller) resyncEndpoints() {
 
 	// check all services that have operator enabled.
 	for _, service := range services.Items {
-		if service.Annotations["endpoint-controller-enable"] == "true" {
+		if service.Annotations["endpoint-controller/enable"] == "true" {
 			if err = c.findEndpoints(service); err != nil {
 				klog.Error(err)
 			}
@@ -207,7 +207,7 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 		}
 	}
 
-	ips := strings.Split(service.Annotations["endpoint-controller-addresses"], ",")
+	ips := strings.Split(service.Annotations["endpoint-controller/targets"], ",")
 	healthyTarget, unhealthyTarget := blockchain.HealthCheck(ips, endpoint.Subsets[0].Ports, c.BlockMiss)
 
 	// add target to endpoints if it does not already exists

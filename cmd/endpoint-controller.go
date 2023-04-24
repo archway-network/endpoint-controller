@@ -89,7 +89,7 @@ func main() {
 		switch event.Type {
 		case watch.Added, watch.Modified:
 			service, _ := event.Object.(*corev1.Service)
-			if service.Annotations["endpoint-controller-enabled"] == "true" {
+			if service.Annotations["endpoint-controller/enabled"] == "true" {
 				queue.Add(service)
 			}
 		case watch.Error:

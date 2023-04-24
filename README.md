@@ -39,12 +39,12 @@ BLOCK_MISS  | Allowed missed blocks amount | 6
 
 ## Usage
 1. Annotate a service with the required endpoints information\
-`endpoint-controller-enable` is set to `true` \
-`endpoint-controller-addresses` is a list of Endpoint target IPs
+`endpoint-controller/enable` is set to `true` \
+`endpoint-controller/targets` is a list of Endpoint target IPs
 ```
   annotations:
-    endpoint-controller-enable: "true"
-    endpoint-controller-addresses: "1.1.1.1,2.2.2.2,3.3.3.3"
+    endpoint-controller/enable: "true"
+    endpoint-controller/targets: "1.1.1.1,2.2.2.2,3.3.3.3"
 ```
 2. Check that the controller has created the endpoint
 ```
