@@ -8,6 +8,9 @@ import (
 func RemoveFromSlice(slice []string, v string) []string {
 	for i, s := range slice {
 		if s == v {
+			if i == len(slice)-1 {
+				return slice[:i]
+			}
 			return append(slice[:i], slice[i+1])
 		}
 	}

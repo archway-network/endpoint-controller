@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
@@ -46,49 +47,61 @@ func getRequest(host string, path string) ([]byte, error) {
 	return b, nil
 }
 
-func checkNodeBehind(healthy, unhealthy []string, blockMiss int) ([]string, []string) {
+func CheckNodeBehind(healthy, unhealthy *[]string, blockMiss int) {
 	var highest int
+	var hostPort string
 	nodeBlockheights := make(map[string]int)
-	for _, ip := range healthy {
+
+	// loop every healthy target to check if the node is falling behind
+	for _, ip := range *healthy {
 		klog.Infof("checking node %s block height", ip)
 		var nodeStatus NodeStatus
-		hostPort := net.JoinHostPort(ip, "26657")
+
+		// to make this function testable
+		if strings.Contains(ip, "127.0.0.1") {
+			hostPort = ip
+		} else {
+			hostPort = net.JoinHostPort(ip, "26657")
+		}
+
+		// get the status REST call and get the latest block height
 		data, err := getRequest(hostPort, "/status")
 		if err != nil {
 			klog.Error(err)
-			unhealthy = append(unhealthy, ip)
+			*unhealthy = append(*unhealthy, ip)
 			continue
 		}
 		err = json.Unmarshal(data, &nodeStatus)
 		if err != nil {
 			klog.Error(err)
-			unhealthy = append(unhealthy, ip)
+			*unhealthy = append(*unhealthy, ip)
 			continue
 		}
 
 		blockHeightInt, err := strconv.Atoi(nodeStatus.Result.SyncInfo.LatestBlockHeight)
 		if err != nil {
 			klog.Error(err)
-			unhealthy = append(unhealthy, ip)
+			*unhealthy = append(*unhealthy, ip)
 			continue
 		}
 
+		// set new highest block height if needed
 		if blockHeightInt > highest {
 			highest = blockHeightInt
 		}
 		nodeBlockheights[ip] = blockHeightInt
-		healthy = append(healthy, ip)
 	}
 
 	// compare block heights
 	// remove target from healthy if highest is greater than blockmiss amount
+	// loop this until there are no more unhealthy endpoints
+	klog.Info(nodeBlockheights)
 	for k, v := range nodeBlockheights {
 		if (highest - v) >= blockMiss {
-			unhealthy = append(unhealthy, k)
-			healthy = utils.RemoveFromSlice(healthy, k)
+			*unhealthy = append(*unhealthy, k)
+			*healthy = utils.RemoveFromSlice(*healthy, k)
 		}
 	}
-	return healthy, unhealthy
 }
 
 func HealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]string, []string) {
@@ -109,5 +122,6 @@ func HealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]st
 		}
 	}
 
-	return checkNodeBehind(healthy, unhealthy, blockMiss)
+	CheckNodeBehind(&healthy, &unhealthy, blockMiss)
+	return healthy, unhealthy
 }
