@@ -5,16 +5,13 @@ import (
 	"strconv"
 )
 
-func RemoveFromSlice(slice []string, v string) []string {
-	for i, s := range slice {
-		if s == v {
-			if i == len(slice)-1 {
-				return slice[:i]
-			}
-			return append(slice[:i], slice[i+1])
+func RemoveFromSlice(s []string, v string) []string {
+	for i, x := range s {
+		if x == v {
+			return append(s[:i], s[i+1:]...)
 		}
 	}
-	return slice
+	return s
 }
 
 func GetEnv(name, defaultValue string) (int, error) {
