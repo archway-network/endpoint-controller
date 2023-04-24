@@ -9,7 +9,7 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - id: release-please
         name: Release Please
