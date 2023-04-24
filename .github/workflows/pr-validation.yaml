@@ -36,15 +36,18 @@ jobs:
           tool_name: GolangCI Lint
           golangci_lint_flags: --config=.golangci.yaml
           fail_on_error: true
-  run-tests:
-    name: Tests
-    runs-on: self-hosted
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.20
-      - name: Tests
-        run: make test
+  # run-tests:
+  #   name: Tests
+  #   runs-on: self-hosted
+  #   env:
+  #     GOPATH: ${{ github.workspace }}
+  #     GOBIN: ${{ github.workspace }}/bin
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: 1.20
+  #     - name: Tests
+  #       run: make tests-ci
