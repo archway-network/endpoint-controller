@@ -31,31 +31,31 @@ func main() {
 	// Get environment variables, if not use defaults
 	syncPeriodEnv, err := utils.GetEnv("SYNC_PERIOD", defaultSyncPeriod)
 	if err != nil {
-		panic(err)
+		klog.Fatal(err)
 	}
 
 	syncPeriod = time.Duration(syncPeriodEnv) * time.Second
 
 	blockMiss, err = utils.GetEnv("BLOCK_MISS", defaultBlockMiss)
 	if err != nil {
-		panic(err)
+		klog.Fatal(err)
 	}
 
 	// create the Kubernetes client object using the service account
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err.Error())
+		klog.Fatal(err.Error())
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		klog.Fatal(err.Error())
 	}
 
 	// create a watch interface for Kubernetes services
 	watcher, err := clientset.CoreV1().Services("").Watch(context.Background(), v1.ListOptions{})
 	if err != nil {
-		panic(err.Error())
+		klog.Fatal(err.Error())
 	}
 
 	// create a workqueue to handle service events
