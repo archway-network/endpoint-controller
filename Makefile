@@ -17,7 +17,7 @@ install-debug: go.sum
 
 build: clean
 	@echo build binary to $(BUILD_FOLDER)
-	goreleaser build --single-target --config .goreleaser.yaml --snapshot --rm-dist
+	goreleaser build --single-target --config .goreleaser.yaml --snapshot --clean
 	@echo create deployment manifest
 	kustomize build k8s > dist/bundle.yaml
 	@echo done

@@ -55,7 +55,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v3
         if: steps.release-please.outputs.release_created
         with:
-          args: release --rm-dist --config .github/.goreleaser.yaml
+          args: release --clean --config .github/.goreleaser.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPRIVATE: github.com/${{ env.GITHUB_REPOSITORY_OWNER }}
