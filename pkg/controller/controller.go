@@ -34,20 +34,12 @@ func (c *Controller) Run() {
 
 	// set up the resync timer
 	timer := time.NewTicker(c.Resync)
-	quit := make(chan struct{})
 	defer timer.Stop()
 	klog.Infof("Synching every %s", c.Resync)
 
-	for {
-		select {
-		case <-timer.C:
-			klog.Info("Resyncing endpoints...")
-			c.resyncEndpoints()
-			timer.Reset(c.Resync)
-		case <-quit:
-			timer.Stop()
-			return
-		}
+	for range timer.C {
+		klog.Info("Resynching endpoints")
+		c.resyncEndpoints()
 	}
 }
 
