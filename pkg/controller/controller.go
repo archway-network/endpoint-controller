@@ -7,6 +7,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
@@ -169,23 +170,15 @@ func (c *Controller) resyncEndpoints() {
 // if not found, creates the endpoints
 // return error if something breaks.
 func (c *Controller) findEndpoints(service corev1.Service) error {
-	endpoints, err := c.Clientset.CoreV1().Endpoints("").List(context.Background(), v1.ListOptions{})
+	endpoints, err := c.Clientset.CoreV1().Endpoints("").Get(context.Background(), service.Name, v1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return c.createEndpoints(service)
+		}
 		return err
 	}
 
-	// Check if endpoint exists
-	// if exists check health status of endpoint targets
-	// if not create the endpoint.
-	for _, endpoint := range endpoints.Items {
-		if endpoint.Name == service.Name {
-			klog.Infof("found existing endpoint %s for service %s \n", endpoint.Name, service.Name)
-			return c.checkEndpoints(service, endpoint)
-		}
-	}
-
-	// create endpoint.
-	return c.createEndpoints(service)
+	return c.checkEndpoints(service, *endpoints)
 }
 
 // check if endpoint exists and the configuration is up to date
