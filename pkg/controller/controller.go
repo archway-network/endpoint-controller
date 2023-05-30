@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
@@ -28,7 +27,6 @@ type Controller struct {
 	Clientset kubernetes.Interface
 	Queue     workqueue.RateLimitingInterface
 	Resync    time.Duration
-	Recorder  record.EventRecorder
 	BlockMiss int
 }
 
@@ -140,11 +138,6 @@ func (c *Controller) createEndpoints(service corev1.Service) error {
 			return err
 		}
 
-		// c.Recorder.Eventf(
-		// 	&service,
-		// 	corev1.EventTypeNormal,
-		// 	"CreatedEndpoint", "Created endpoint for service %s", service.Name,
-		// )
 		klog.Infof("Created endpoint for service %s\n", service.Name)
 
 		return nil
