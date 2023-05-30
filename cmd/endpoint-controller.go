@@ -5,7 +5,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -62,11 +62,16 @@ func main() {
 	workqueueConfig := workqueue.RateLimitingQueueConfig{
 		Name: "services",
 	}
-	queue := workqueue.NewRateLimitingQueueWithConfig(workqueue.DefaultControllerRateLimiter(), workqueueConfig)
+	queue := workqueue.NewRateLimitingQueueWithConfig(
+		workqueue.DefaultControllerRateLimiter(),
+		workqueueConfig,
+	)
 
 	// create an event recorder to log events
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: clientset.CoreV1().Events("")})
+	eventBroadcaster.StartRecordingToSink(
+		&typedcorev1.EventSinkImpl{Interface: clientset.CoreV1().Events("")},
+	)
 	recorder := eventBroadcaster.NewRecorder(
 		scheme.Scheme,
 		corev1.EventSource{
@@ -75,7 +80,7 @@ func main() {
 	)
 
 	// create a controller to handle service events
-	controller := controller.Controller{
+	c := controller.Controller{
 		Clientset: clientset,
 		Queue:     queue,
 		Recorder:  recorder,
@@ -84,7 +89,7 @@ func main() {
 	}
 
 	// start the controller
-	go controller.Run()
+	go c.Run()
 
 	//nolint: exhaustive // we don't need all the watch parameters here
 	// loop through each event and add the service to the workqueue
@@ -92,7 +97,7 @@ func main() {
 		switch event.Type {
 		case watch.Added, watch.Modified:
 			service, _ := event.Object.(*corev1.Service)
-			if service.Annotations["endpoint-controller/enable"] == "true" {
+			if service.Annotations[controller.EndpointControllerEnable] == "true" {
 				queue.Add(service)
 			}
 		case watch.Error:

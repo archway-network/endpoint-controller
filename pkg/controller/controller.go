@@ -8,7 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -16,6 +16,11 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/archway-network/endpoint-controller/pkg/blockchain"
+)
+
+const (
+	EndpointControllerEnable  = "endpoint-controller/enable"
+	EndpointControllerTargets = "endpoint-controller/targets"
 )
 
 // Controller defines the endpoint controller.
@@ -75,9 +80,12 @@ func createEndpointPortObject(service corev1.Service) []corev1.EndpointPort {
 // create endpoint addresses object.
 func createEndpointAddressObject(service corev1.Service) ([]corev1.EndpointAddress, error) {
 	var addresses []corev1.EndpointAddress
-	serviceEndpointsAddress := service.Annotations["endpoint-controller/targets"]
+	serviceEndpointsAddress := service.Annotations[EndpointControllerTargets]
 	if serviceEndpointsAddress == "" {
-		return addresses, fmt.Errorf("%s : annotation endpoint-controller/targets is empty", service.Name)
+		return addresses, fmt.Errorf(
+			"%s : annotation endpoint-controller/targets is empty",
+			service.Name,
+		)
 	}
 
 	for _, address := range strings.Split(serviceEndpointsAddress, ",") {
@@ -111,7 +119,7 @@ func (c *Controller) createEndpoints(service corev1.Service) error {
 			ObjectMeta: v1.ObjectMeta{
 				Name:        service.Name,
 				Namespace:   service.Namespace,
-				Annotations: map[string]string{"endpoint-controller/enable": "true"},
+				Annotations: map[string]string{EndpointControllerEnable: "true"},
 			},
 			Subsets: []corev1.EndpointSubset{},
 		}
@@ -154,7 +162,7 @@ func (c *Controller) resyncEndpoints() {
 
 	// check all services that have operator enabled.
 	for _, service := range services.Items {
-		if service.Annotations["endpoint-controller/enable"] == "true" {
+		if service.Annotations[EndpointControllerEnable] == "true" {
 			if err = c.findEndpoints(service); err != nil {
 				klog.Error(err)
 			}
@@ -170,7 +178,9 @@ func (c *Controller) resyncEndpoints() {
 // if not found, creates the endpoints
 // return error if something breaks.
 func (c *Controller) findEndpoints(service corev1.Service) error {
-	endpoints, err := c.Clientset.CoreV1().Endpoints("").Get(context.Background(), service.Name, v1.GetOptions{})
+	endpoints, err := c.Clientset.CoreV1().
+		Endpoints("").
+		Get(context.Background(), service.Name, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return c.createEndpoints(service)
@@ -192,8 +202,12 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 		}
 	}
 
-	ips := strings.Split(service.Annotations["endpoint-controller/targets"], ",")
-	healthyTarget, unhealthyTarget := blockchain.HealthCheck(ips, endpoint.Subsets[0].Ports, c.BlockMiss)
+	ips := strings.Split(service.Annotations[EndpointControllerTargets], ",")
+	healthyTarget, unhealthyTarget := blockchain.HealthCheck(
+		ips,
+		endpoint.Subsets[0].Ports,
+		c.BlockMiss,
+	)
 
 	// add target to endpoints if it does not already exists
 	for _, ht := range healthyTarget {
