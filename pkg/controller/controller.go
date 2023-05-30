@@ -172,7 +172,7 @@ func (c *Controller) resyncEndpoints() {
 // return error if something breaks.
 func (c *Controller) findEndpoints(service corev1.Service) error {
 	endpoints, err := c.Clientset.CoreV1().
-		Endpoints("").
+		Endpoints(service.Namespace).
 		Get(context.Background(), service.Name, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
