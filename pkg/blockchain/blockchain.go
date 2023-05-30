@@ -8,12 +8,17 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/strings/slices"
 
 	"github.com/archway-network/endpoint-controller/pkg/utils"
+)
+
+const (
+	httpTimeout = 5
 )
 
 type NodeStatus struct {
@@ -25,7 +30,9 @@ type NodeStatus struct {
 }
 
 func getRequest(host string, path string) ([]byte, error) {
-	cli := &http.Client{}
+	cli := &http.Client{
+		Timeout: httpTimeout * time.Second,
+	}
 	ctx := context.Background()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+host+path, nil)
 	if err != nil {
@@ -111,7 +118,11 @@ func HealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]st
 			klog.Infof("checking node %s port %d protocol %s", ip, port.Port, port.Protocol)
 			hostPort := net.JoinHostPort(ip, strconv.Itoa(int(port.Port)))
 			if _, err := getRequest(hostPort, "/"); err != nil {
-				klog.Errorf("Could not get correct answer from %s:%d, marking target unhealthy", ip, port.Port)
+				klog.Errorf(
+					"Could not get correct answer from %s:%d, marking target unhealthy",
+					ip,
+					port.Port,
+				)
 				unhealthy = append(unhealthy, ip)
 				break
 			}
