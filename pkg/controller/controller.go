@@ -185,8 +185,7 @@ func (c *Controller) findEndpoints(service corev1.Service) error {
 }
 
 // check if endpoint exists and the configuration is up to date
-// return true if everything is OK or if error is found
-// returns false if endpoint needs to be created.
+// return error if nothing goes wrong.
 func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endpoints) error {
 	if !c.checkPortSync(service, endpoint) {
 		endpoint.Subsets[0].Ports = createEndpointPortObject(service)
