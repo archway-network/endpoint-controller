@@ -54,6 +54,15 @@ func getRequest(host string, path string) ([]byte, error) {
 	return b, nil
 }
 
+func checkOpenPort(host, port string) error {
+	timeout := httpTimeout * time.Second
+
+	if _, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout); err != nil {
+		return err
+	}
+	return nil
+}
+
 func CheckNodeBehind(healthy, unhealthy *[]string, blockMiss int) {
 	var highest int
 	var hostPort string
@@ -116,8 +125,7 @@ func HealthCheck(ips []string, ports []corev1.EndpointPort, blockMiss int) ([]st
 		klog.Infof("checking blockchain node (%s) health", ip)
 		for _, port := range ports {
 			klog.Infof("checking node %s port %d protocol %s", ip, port.Port, port.Protocol)
-			hostPort := net.JoinHostPort(ip, strconv.Itoa(int(port.Port)))
-			if _, err := getRequest(hostPort, "/"); err != nil {
+			if err := checkOpenPort(ip, strconv.Itoa(int(port.Port))); err != nil {
 				klog.Errorf(
 					"Could not get correct answer from %s:%d, marking target unhealthy",
 					ip,
