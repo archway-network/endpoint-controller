@@ -1,11 +1,8 @@
----
 name: PR Validation
-
 on:
   pull_request:
     branches:
       - main
-
 jobs:
   validate-commits:
     name: Validate Conventional Commits
@@ -48,6 +45,7 @@ jobs:
   #     - name: Set up Go
   #       uses: actions/setup-go@v4
   #       with:
+  #         go-version-file: go.mod
   #         go-version: 1.20
   #     - name: Tests
   #       run: make tests-ci
