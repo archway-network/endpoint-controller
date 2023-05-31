@@ -205,8 +205,6 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 	)
 
 	// check if the endpoint target will matches the healthy ones
-	klog.Infof("Healthy Targets: %v", healthyTargets)
-	klog.Infof("Endpoint Targets: %v", endpoint.Subsets[0].Addresses)
 	if len(healthyTargets) != len(endpoint.Subsets[0].Addresses) {
 		return c.UpdateEndpointTargets(endpoint, healthyTargets)
 	}
@@ -215,6 +213,7 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 			if err := c.UpdateEndpointTargets(endpoint, healthyTargets); err != nil {
 				return err
 			}
+			return nil
 		}
 	}
 
