@@ -198,21 +198,21 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 	for ip := range ips {
 		ips[ip] = strings.TrimSpace(ips[ip])
 	}
-	healthyTarget := blockchain.HealthCheck(
+	healthyTargets := blockchain.HealthCheck(
 		ips,
 		endpoint.Subsets[0].Ports,
 		c.BlockMiss,
 	)
 
 	// check if the endpoint target will matches the healthy ones
-	klog.Infof("Healthy Targets: %v", healthyTarget)
+	klog.Infof("Healthy Targets: %v", healthyTargets)
 	klog.Infof("Endpoint Targets: %v", endpoint.Subsets[0].Addresses)
-	if len(healthyTarget) != len(endpoint.Subsets[0].Addresses) {
-		return c.UpdateEndpointTargets(endpoint, healthyTarget)
+	if len(healthyTargets) != len(endpoint.Subsets[0].Addresses) {
+		return c.UpdateEndpointTargets(endpoint, healthyTargets)
 	}
-	for _, ht := range healthyTarget {
+	for _, ht := range healthyTargets {
 		if !checkEndpointsIP(ht, endpoint) {
-			if err := c.UpdateEndpointTargets(endpoint, healthyTarget); err != nil {
+			if err := c.UpdateEndpointTargets(endpoint, healthyTargets); err != nil {
 				return err
 			}
 		}
