@@ -328,3 +328,32 @@ func TestRemoveEndpointTarget(t *testing.T) {
 
 	assert.Equal(t, expectedEndpoint, actualEndpoint)
 }
+
+func TestUpdateNeeded(t *testing.T) {
+	var expectedEndpointAddressList []corev1.EndpointAddress
+	var incorrectEndpointAddressList []corev1.EndpointAddress
+	addressListExpected := []string{"1.1.1.1", "10.23.1.3", "10.1.1.1"}
+	addressListBad := []string{"2.2.2.2", "10.23.1.3", "10.1.1.1"}
+
+	for _, address := range addressListExpected {
+		expectedEndpointAddressList = append(expectedEndpointAddressList, corev1.EndpointAddress{
+			IP: address,
+		})
+	}
+
+	for _, address := range addressListBad {
+		incorrectEndpointAddressList = append(incorrectEndpointAddressList, corev1.EndpointAddress{
+			IP: address,
+		})
+	}
+
+	if controller.EndpointUpdateNeeded(addressListExpected, expectedEndpointAddressList) {
+		t.Errorf("EndpointUpdateNeeded returned true when it should have returned false")
+	}
+	if !controller.EndpointUpdateNeeded(addressListBad, expectedEndpointAddressList) {
+		t.Errorf("EndpointUpdateNeeded returned false when it should have returned true")
+	}
+	if !controller.EndpointUpdateNeeded(addressListExpected, incorrectEndpointAddressList) {
+		t.Errorf("EndpointUpdateNeeded returned false when it should have returned true")
+	}
+}

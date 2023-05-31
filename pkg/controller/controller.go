@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -204,32 +205,27 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 		c.BlockMiss,
 	)
 
-	// check if the endpoint target will matches the healthy ones
-	if len(healthyTargets) != len(endpoint.Subsets[0].Addresses) {
+	if EndpointUpdateNeeded(healthyTargets, endpoint.Subsets[0].Addresses) {
 		return c.UpdateEndpointTargets(endpoint, healthyTargets)
-	}
-	for _, ht := range healthyTargets {
-		if !checkEndpointsIP(ht, endpoint) {
-			if err := c.UpdateEndpointTargets(endpoint, healthyTargets); err != nil {
-				return err
-			}
-			return nil
-		}
 	}
 
 	return nil
 }
 
-// checkEndpointsIP
-// return true if target can be found from endpoints
-// return false if target cannot be found.
-func checkEndpointsIP(ip string, endpoints corev1.Endpoints) bool {
-	for _, address := range endpoints.Subsets[0].Addresses {
-		if address.IP == ip {
-			return true
-		}
+// endpointUpdateNeeded
+// check if the endpoint needs to be updated
+// return true if update is needed
+// return false if update is not needed.
+func EndpointUpdateNeeded(
+	healthyTargets []string,
+	endpointAddresses []corev1.EndpointAddress,
+) bool {
+	var addressList []string
+	for _, address := range endpointAddresses {
+		addressList = append(addressList, address.IP)
 	}
-	return false
+
+	return !reflect.DeepEqual(healthyTargets, addressList)
 }
 
 // Update endpoint targets.
