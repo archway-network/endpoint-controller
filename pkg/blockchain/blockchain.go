@@ -115,7 +115,7 @@ func CheckNodeBehind(healthy *[]string, blockMiss int) {
 	// remove target from healthy if highest is greater than blockmiss amount
 	// loop this until there are no more unhealthy endpoints
 	for k, v := range nodeBlockheights {
-		if (highest - v) >= blockMiss {
+		if (highest - v) > blockMiss {
 			*healthy = utils.RemoveFromSlice(*healthy, k)
 		}
 	}
