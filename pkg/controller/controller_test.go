@@ -5,18 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/archway-network/endpoint-controller/pkg/controller"
-
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/util/workqueue"
+
+	"github.com/archway-network/endpoint-controller/pkg/controller"
 )
 
 // func TestMain(m *testing.M) {
@@ -97,14 +94,15 @@ func TestController(t *testing.T) {
 	}
 
 	// add the test service to the fake clientset
-	_, err := clientset.CoreV1().Services(service.Namespace).Create(context.Background(), service, metav1.CreateOptions{})
+	_, err := clientset.CoreV1().
+		Services(service.Namespace).
+		Create(context.Background(), service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
 	// create a new controller
 	c := controller.Controller{
 		Clientset: clientset,
 		Resync:    time.Duration(1) * time.Second,
-		Queue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultItemBasedRateLimiter(), "services"),
 	}
 
 	// start the controller
@@ -131,7 +129,7 @@ func TestController(t *testing.T) {
 	assert.Equal(t, endpoint, actualEndpoint)
 }
 
-func TestAddEndpointTarget(t *testing.T) {
+func TestUpdateEndpoint(t *testing.T) {
 	// create a fake clientset
 	clientset := fake.NewSimpleClientset()
 
@@ -139,7 +137,6 @@ func TestAddEndpointTarget(t *testing.T) {
 	c := controller.Controller{
 		Clientset: clientset,
 		Resync:    time.Duration(1) * time.Second,
-		Queue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultItemBasedRateLimiter(), "services"),
 	}
 
 	// create a test endpoint
@@ -177,6 +174,16 @@ func TestAddEndpointTarget(t *testing.T) {
 			},
 		},
 	}
+	// add the test endpoint to the fake clientset
+	_, err := clientset.CoreV1().Endpoints(
+		endpoint.Namespace).Create(context.Background(),
+		endpoint, metav1.CreateOptions{})
+
+	assert.NoError(t, err)
+	ips := []string{"1.1.1.1", "2.2.2.2", "3.3.3.3"}
+	err = c.UpdateEndpointTargets(*endpoint, ips)
+	assert.NoError(t, err)
+
 	expectedEndpoint := &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-service",
@@ -215,15 +222,6 @@ func TestAddEndpointTarget(t *testing.T) {
 			},
 		},
 	}
-	// add the test service to the fake clientset
-	_, err := clientset.CoreV1().Endpoints(
-		endpoint.Namespace).Create(context.Background(),
-		endpoint, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	// add endPointTarget
-	err = c.AddEndpointTarget(*endpoint, "3.3.3.3")
-	assert.NoError(t, err)
 
 	// check that the endpoint is correct
 	actualEndpoint, err := clientset.CoreV1().Endpoints(
@@ -242,7 +240,6 @@ func TestRemoveEndpointTarget(t *testing.T) {
 	c := controller.Controller{
 		Clientset: clientset,
 		Resync:    time.Duration(1) * time.Second,
-		Queue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultItemBasedRateLimiter(), "services"),
 	}
 
 	// create a test endpoint
@@ -319,8 +316,8 @@ func TestRemoveEndpointTarget(t *testing.T) {
 		endpoint, metav1.CreateOptions{})
 	assert.NoError(t, err)
 
-	// add endPointTarget
-	err = c.RemoveEndpointTarget(*endpoint, "2.2.2.2")
+	ips := []string{"1.1.1.1"}
+	err = c.UpdateEndpointTargets(*endpoint, ips)
 	assert.NoError(t, err)
 
 	// check that the endpoint is correct

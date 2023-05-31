@@ -7,8 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/archway-network/endpoint-controller/pkg/blockchain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/archway-network/endpoint-controller/pkg/blockchain"
 )
 
 func handleGetRequest1(w http.ResponseWriter, _ *http.Request) {
@@ -46,10 +47,8 @@ func createTestServer(addr string, handler http.Handler) (*httptest.Server, erro
 }
 
 func TestHandleGetRequests(t *testing.T) {
-	var unhealthy []string
 	healthy := []string{"127.0.0.1:26657", "127.0.0.1:26658", "127.0.0.1:26659"}
 	expectedHealthy := []string{"127.0.0.1:26657", "127.0.0.1:26658"}
-	expectedUnhealthy := []string{"127.0.0.1:26659"}
 	// Create the first test server
 	ts1, err := createTestServer("127.0.0.1:26657", http.HandlerFunc(handleGetRequest1))
 	if err != nil {
@@ -71,8 +70,7 @@ func TestHandleGetRequests(t *testing.T) {
 	}
 	defer ts3.Close()
 
-	blockchain.CheckNodeBehind(&healthy, &unhealthy, 6)
+	blockchain.CheckNodeBehind(&healthy, 6)
 
 	assert.Equal(t, expectedHealthy, healthy)
-	assert.Equal(t, expectedUnhealthy, unhealthy)
 }

@@ -11,7 +11,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
 	"github.com/archway-network/endpoint-controller/pkg/blockchain"
@@ -25,15 +24,12 @@ const (
 // Controller defines the endpoint controller.
 type Controller struct {
 	Clientset kubernetes.Interface
-	Queue     workqueue.RateLimitingInterface
 	Resync    time.Duration
 	BlockMiss int
 }
 
 // Run starts the endpoint controller.
 func (c *Controller) Run() {
-	defer c.Queue.ShutDown()
-
 	klog.Info("Starting endpoint controller...")
 
 	// set up the resync timer
@@ -41,6 +37,7 @@ func (c *Controller) Run() {
 	defer timer.Stop()
 	klog.Infof("Synching every %s", c.Resync)
 
+	c.resyncEndpoints()
 	for range timer.C {
 		klog.Info("Resynching endpoints")
 		c.resyncEndpoints()
@@ -176,7 +173,9 @@ func (c *Controller) findEndpoints(service corev1.Service) error {
 		Get(context.Background(), service.Name, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return c.createEndpoints(service)
+			if err = c.createEndpoints(service); err != nil {
+				return err
+			}
 		}
 		return err
 	}
@@ -195,25 +194,23 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 	}
 
 	ips := strings.Split(service.Annotations[EndpointControllerTargets], ",")
-	healthyTarget, unhealthyTarget := blockchain.HealthCheck(
+	healthyTarget := blockchain.HealthCheck(
 		ips,
 		endpoint.Subsets[0].Ports,
 		c.BlockMiss,
 	)
 
-	// add target to endpoints if it does not already exists
+	// check if the endpoint target will matches the healthy ones
+	klog.Infof("Healthy Targets: %v", healthyTarget)
+	klog.Infof("Endpoint Targets: %v", endpoint.Subsets[0].Addresses)
+	if len(healthyTarget) != len(endpoint.Subsets[0].Addresses) {
+		return c.UpdateEndpointTargets(endpoint, healthyTarget)
+	}
 	for _, ht := range healthyTarget {
 		if !checkEndpointsIP(ht, endpoint) {
-			if err := c.AddEndpointTarget(endpoint, ht); err != nil {
+			if err := c.UpdateEndpointTargets(endpoint, healthyTarget); err != nil {
 				return err
 			}
-		}
-	}
-
-	// remove unhealthy target from endpoints
-	for _, ut := range unhealthyTarget {
-		if err := c.RemoveEndpointTarget(endpoint, ut); err != nil {
-			return err
 		}
 	}
 
@@ -232,45 +229,16 @@ func checkEndpointsIP(ip string, endpoints corev1.Endpoints) bool {
 	return false
 }
 
-// AddEndpointTarget
-// adds target IP from endpoint.
-func (c *Controller) AddEndpointTarget(endpoints corev1.Endpoints, ip string) error {
-	newEndpointAddress := corev1.EndpointAddress{
-		IP: ip,
-	}
-	endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newEndpointAddress)
-
-	klog.Infof("adding healthy target %s to endpoint %s", ip, endpoints.Name)
-	return c.patchEndpoints(endpoints)
-}
-
-// RemoveEndpointTarget
-// removes target IP from endpoint.
-func (c *Controller) RemoveEndpointTarget(endpoints corev1.Endpoints, ip string) error {
-	var endpointAddresses []corev1.EndpointAddress
-	const minimumNumber = 2
-
-	// Return if target cannot be found from endpoint.
-	if !checkEndpointsIP(ip, endpoints) {
-		return nil
+// Update endpoint targets.
+func (c *Controller) UpdateEndpointTargets(endpoints corev1.Endpoints, ips []string) error {
+	endpointAddressList := []corev1.EndpointAddress{}
+	for _, ip := range ips {
+		endpointAddressList = append(endpointAddressList, corev1.EndpointAddress{
+			IP: ip,
+		})
+		endpoints.Subsets[0].Addresses = endpointAddressList
 	}
 
-	// Remove target from endpoint but fail if it's the last one since endpoints
-	// cannot be empty.
-	klog.Infof("Removing endpoints (%s) target %s", endpoints.Name, ip)
-	if len(endpoints.Subsets[0].Addresses) < minimumNumber {
-		klog.Warningf("Cannot remove the last IP in endpoint %s", endpoints.Name)
-		return nil
-	}
-
-	for _, address := range endpoints.Subsets[0].Addresses {
-		if address.IP == ip {
-			continue
-		}
-		endpointAddresses = append(endpointAddresses, address)
-	}
-	endpoints.Subsets[0].Addresses = endpointAddresses
-
-	klog.Infof("removing unhealthy target %s from endpoint %s", ip, endpoints.Name)
+	klog.Infof("resynching endpoints (%s) targets (%s)", endpoints.Name, ips)
 	return c.patchEndpoints(endpoints)
 }
