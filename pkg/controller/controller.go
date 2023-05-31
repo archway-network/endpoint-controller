@@ -85,7 +85,7 @@ func createEndpointAddressObject(service corev1.Service) ([]corev1.EndpointAddre
 
 	for _, address := range strings.Split(serviceEndpointsAddress, ",") {
 		addresses = append(addresses, corev1.EndpointAddress{
-			IP: address,
+			IP: strings.TrimSpace(address),
 		})
 	}
 	return addresses, nil
@@ -193,7 +193,11 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 		}
 	}
 
+	// split the annotation and remove spaces
 	ips := strings.Split(service.Annotations[EndpointControllerTargets], ",")
+	for ip := range ips {
+		ips[ip] = strings.TrimSpace(ips[ip])
+	}
 	healthyTarget := blockchain.HealthCheck(
 		ips,
 		endpoint.Subsets[0].Ports,
