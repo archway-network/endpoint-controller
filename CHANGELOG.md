@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/archway-network/endpoint-controller/compare/v1.0.0...v1.0.1) (2023-06-01)
+
+
+### Bug Fixes
+
+* docker buildx failing due to environment issues ([f69bb18](https://github.com/archway-network/endpoint-controller/commit/f69bb18e2cbd308386a2524a74437b7be04c81b4))
+
 ## 1.0.0 (2023-06-01)
 
 
