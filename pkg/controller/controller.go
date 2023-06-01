@@ -205,6 +205,10 @@ func (c *Controller) checkEndpoints(service corev1.Service, endpoint corev1.Endp
 		c.BlockMiss,
 	)
 
+	if len(healthyTargets) == 0 {
+		return fmt.Errorf("no healthy targets")
+	}
+
 	if EndpointUpdateNeeded(healthyTargets, endpoint.Subsets[0].Addresses) {
 		return c.UpdateEndpointTargets(endpoint, healthyTargets)
 	}
