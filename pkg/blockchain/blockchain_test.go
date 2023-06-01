@@ -2,7 +2,6 @@ package blockchain_test
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,42 +32,29 @@ func handleGetRequest3(w http.ResponseWriter, _ *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-func createTestServer(addr string, handler http.Handler) (*httptest.Server, error) {
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
-	ts := httptest.NewUnstartedServer(handler)
-	ts.Listener = l
-	ts.Start()
-
-	return ts, nil
+func createTestServer(handler http.Handler) *httptest.Server {
+	return httptest.NewServer(handler)
 }
 
 func TestHandleGetRequests(t *testing.T) {
-	healthy := []string{"127.0.0.1:26657", "127.0.0.1:26658", "127.0.0.1:26659"}
-	expectedHealthy := []string{"127.0.0.1:26657", "127.0.0.1:26658"}
 	// Create the first test server
-	ts1, err := createTestServer("127.0.0.1:26657", http.HandlerFunc(handleGetRequest1))
-	if err != nil {
-		t.Fatal(err)
-	}
+	ts1 := createTestServer(http.HandlerFunc(handleGetRequest1))
 	defer ts1.Close()
 
 	// Create the second test server
-	ts2, err := createTestServer("127.0.0.1:26658", http.HandlerFunc(handleGetRequest2))
-	if err != nil {
-		t.Fatal(err)
-	}
+	ts2 := createTestServer(http.HandlerFunc(handleGetRequest2))
 	defer ts2.Close()
 
 	// Create the third test server
-	ts3, err := createTestServer("127.0.0.1:26659", http.HandlerFunc(handleGetRequest3))
-	if err != nil {
-		t.Fatal(err)
-	}
+	ts3 := createTestServer(http.HandlerFunc(handleGetRequest3))
 	defer ts3.Close()
+
+	healthy := []string{
+		ts1.Listener.Addr().String(),
+		ts2.Listener.Addr().String(),
+		ts3.Listener.Addr().String(),
+	}
+	expectedHealthy := []string{ts1.Listener.Addr().String(), ts2.Listener.Addr().String()}
 
 	blockchain.CheckNodeBehind(&healthy, 6)
 
