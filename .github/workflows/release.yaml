@@ -1,15 +1,11 @@
----
 name: Release
-
 on:
   push:
     branches:
-      - main
-
 jobs:
   release:
     name: Release
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - id: release-please
         name: Release Please
@@ -19,6 +15,7 @@ jobs:
           package-name: endpoint-controller
           changelog-types: >-
             [
+
               {"type":"feat","section":"Features","hidden":false},
               {"type":"fix","section":"Bug Fixes","hidden":false},
               {"type":"chore","section":"Miscellaneous","hidden":true}
@@ -59,4 +56,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPRIVATE: github.com/${{ env.GITHUB_REPOSITORY_OWNER }}
-
