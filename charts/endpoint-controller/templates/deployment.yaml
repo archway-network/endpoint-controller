@@ -21,19 +21,23 @@ spec:
         {{- include "endpoint-controller.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{include "endpoint-controller.serviceAccountName" .}}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{.Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion}}"
           imagePullPolicy: {{.Values.image.pullPolicy}}
+          {{- with .Values.podSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           env:
             - name: SYNC_PERIOD
               value: "{{.Values.controller.sync_period}}"
             - name: BLOCK_MISS
               value: "{{.Values.controller.block_miss}}"
-          {{- with .Values.containerSecurityContext }}
-          securityContext:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
