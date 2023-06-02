@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.1](https://github.com/archway-network/endpoint-controller/compare/v1.0.0...v1.0.1) (2023-06-02)
+
+
+### Bug Fixes
+
+* docker buildx failing due to environment issues ([f69bb18](https://github.com/archway-network/endpoint-controller/commit/f69bb18e2cbd308386a2524a74437b7be04c81b4))
+* docker images are failing ([e560448](https://github.com/archway-network/endpoint-controller/commit/e560448857bdd5710b8337f8bc16ab2f76a89e28))
+* rework dockerfile so that we only build with goreleaser ([e246a7a](https://github.com/archway-network/endpoint-controller/commit/e246a7a0d71f91da6643bc23f44730dc38a738e0))
+
 ## 1.0.0 (2023-06-01)
 
 
