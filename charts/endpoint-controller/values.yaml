@@ -25,11 +25,11 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 podSecurityContext:
+  fsGroup: 20000
   runAsGroup: 20000
   runAsNonRoot: true
   runAsUser: 20000
 containerSecurityContext:
-  fsGroup: 20000
   allowPrivilegeEscalation: false
   capabilities:
     drop:
