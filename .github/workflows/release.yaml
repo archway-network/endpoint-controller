@@ -1,7 +1,9 @@
+---
 name: Release
 on:
   push:
     branches:
+      - main
 jobs:
   release:
     name: Release
@@ -15,7 +17,6 @@ jobs:
           package-name: endpoint-controller
           changelog-types: >-
             [
-
               {"type":"feat","section":"Features","hidden":false},
               {"type":"fix","section":"Bug Fixes","hidden":false},
               {"type":"chore","section":"Miscellaneous","hidden":true}
@@ -49,10 +50,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v3
         if: steps.release-please.outputs.release_created
-        with:
-          args: release --clean --config .github/.goreleaser.yaml
+        run: make release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOPRIVATE: github.com/${{ env.GITHUB_REPOSITORY_OWNER }}

@@ -1,11 +1,10 @@
-# build paramters
+# build parameters
 BUILD_FOLDER = dist
 APP_VERSION = $(git describe --tags --always)
 PACKAGES = $(go list ./...)
-
-###############################################################################
-###                           Basic Golang Commands                         ###
-###############################################################################
+GOLANG_VERSION = 1.20.4
+PACKAGE_NAME = github.com/archway-network/endpoint-controller
+DOCKER := $(shell which docker)
 
 all: install
 
@@ -21,6 +20,17 @@ build: clean
 	@echo create deployment manifest
 	kustomize build k8s > dist/bundle.yaml
 	@echo done
+
+release:
+	$(DOCKER) run \
+		--rm \
+		-v $(HOME)/.docker/config.json:/root/.docker/config.json \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
+		-w /go/src/$(PACKAGE_NAME) \
+		ghcr.io/goreleaser/goreleaser-cross:v$(GOLANG_VERSION) \
+		--clean \
 
 clean:
 	@echo clean build folder $(BUILD_FOLDER)
