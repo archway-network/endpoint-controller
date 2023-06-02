@@ -2,7 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.name }}
+  name: {{ include "endpoint-controller.fullname" . }}
+  namespace: {{ include "endpoint-controller.namespace" . }} 
   labels:
     {{- include "endpoint-controller.labels" . | nindent 4}}
 spec:
@@ -24,21 +25,13 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{.Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion}}"
           imagePullPolicy: {{.Values.image.pullPolicy}}
-          environment:
+          env:
               SYNC_PERIOD: {{.Values.controller.sync_period}}
               BLOCK_MISS: {{.Values.controller.block_miss}}
+          {{- with .Values.containerSecurityContext }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            privileged: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 20000
-            runAsGroup: 20000
-            seccompProfile:
-              type: RuntimeDefault
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

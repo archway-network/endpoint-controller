@@ -24,6 +24,16 @@ resources: {}
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+containerSecurityContext:
+  fsGroup: 20000
+  runAsGroup: 20000
+  runAsNonRoot: true
+  runAsUser: 20000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []
