@@ -6,7 +6,7 @@ on:
 jobs:
   validate-commits:
     name: Validate Conventional Commits
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
@@ -18,7 +18,7 @@ jobs:
           config: .github/.commitsar.yml
   run-reviewdog:
     name: Run ReviewDog
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
