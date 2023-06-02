@@ -47,7 +47,6 @@ Selector labels
 */}}
 {{- define "endpoint-controller.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "endpoint-controller.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*

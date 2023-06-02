@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,5 +41,4 @@ spec:
             runAsGroup: 20000
             seccompProfile:
               type: RuntimeDefault
-      
       restartPolicy: Always
