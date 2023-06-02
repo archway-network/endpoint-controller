@@ -1,15 +1,13 @@
 ---
 name: Release
-
 on:
   push:
     branches:
       - main
-
 jobs:
   release:
     name: Release
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - id: release-please
         name: Release Please
@@ -52,11 +50,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v3
         if: steps.release-please.outputs.release_created
-        with:
-          args: release --clean --config .github/.goreleaser.yaml
+        run: make release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOPRIVATE: github.com/${{ env.GITHUB_REPOSITORY_OWNER }}
-
