@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/archway-network/endpoint-controller/compare/v1.0.1...v1.1.0) (2023-06-02)
+
+
+### Features
+
+* initial helm chart ([fc0548f](https://github.com/archway-network/endpoint-controller/commit/fc0548f209f59eee572d899b789e603b73cbedfe))
+
+
+### Bug Fixes
+
+* change to gh runners ([cf62d29](https://github.com/archway-network/endpoint-controller/commit/cf62d294741800840c85312ad4e432146d1cfa0c))
+* environment variable syntax ([a55052d](https://github.com/archway-network/endpoint-controller/commit/a55052daf28b514165db26edaaabd89772e05fdb))
+* removing access rights, making names non hard coded, securitycontexts ([953afe4](https://github.com/archway-network/endpoint-controller/commit/953afe44e6b02dda3dd2b06a04240cb1e4cebdd0))
+* split security contexts ([9be5aaf](https://github.com/archway-network/endpoint-controller/commit/9be5aaf9ff094314468de9a922d41fc4d2107c60))
+* wrong context used ([194b98a](https://github.com/archway-network/endpoint-controller/commit/194b98a712429b2133aa92e4e405227c50fd1933))
+
 ## [1.0.1](https://github.com/archway-network/endpoint-controller/compare/v1.0.0...v1.0.1) (2023-06-02)
 
 
