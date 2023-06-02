@@ -3,7 +3,6 @@ name: Release
 on:
   push:
     branches:
-      - main
 jobs:
   release:
     name: Release
@@ -23,7 +22,7 @@ jobs:
             ]
       - name: Checkout
         uses: actions/checkout@v3
-        if: steps.release-please.outputs.release_created
+        # if: steps.release-please.outputs.release_created
         with:
           fetch-depth: 0
       - name: Setup ssh-agent
@@ -54,3 +53,18 @@ jobs:
         run: make release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package Helm Charts
+        if: steps.release-please.outputs.release_created
+        run: |
+          ls -la
+          tar -zcvf charts.tar.gz ./charts
+      - name: Upload Helm Charts
+        if: steps.release-please.outputs.release_created
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.release-please.outputs.upload_url }}
+          asset_path: ./charts.tar.gz
+          asset_name: charts.tar.gz
+          asset_content_type: application/gzip
